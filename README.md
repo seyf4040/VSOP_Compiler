@@ -3,16 +3,20 @@
 
 ## Usage 
 Pull Docker Image (one time)
-```docker pull cffs/compilers```
+```
+docker pull cffs/compilers
+```
 
 Run Docker Container (with current directory shared, available at /home/vagrant/compilers)
-```docker run --rm -it -v "%cd%:/home/vagrant/compilers" cffs/compilers /bin/sh```
+```
+docker run --rm -it -v "%cd%:/home/vagrant/compilers" cffs/compilers /bin/sh
+```
 
-go to user vagrant
-```su vagrant```
-
-Navigate to home directory
-```cd /home/vagrant```
+Go to user vagrant then navigate to home directory
+```
+su vagrant
+cd /home/vagrant
+```
 
 ## Project structure 
 ```
