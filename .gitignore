@@ -33,3 +33,11 @@
 
 # private files 
 *.txt
+
+# Automatically created files when running "make"
+driver.cpp
+lexer.cpp
+location.hh
+parser.cpp
+parser.hpp
+vsopc

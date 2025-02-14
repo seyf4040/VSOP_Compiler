@@ -1,6 +1,7 @@
 #include "utils.hpp"
 #include <stdexcept>
 
+
 int stringToInt(const std::string& str) {
     try {
         size_t idx = 0;
@@ -10,3 +11,4 @@ int stringToInt(const std::string& str) {
         throw std::invalid_argument("Invalid input string: " + str);
     }
 }
+

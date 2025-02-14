@@ -26,10 +26,24 @@
                             const string &m);
 
     // Code run each time a pattern is matched.
-    #define YY_USER_ACTION  loc.columns(yyleng);
+    #define YY_USER_ACTION  loc_update();
+
 
     // Global variable used to maintain the current location.
     location loc;
+
+    void loc_update() {
+        loc.step();
+        for (int i = 0; i < yyleng; ++i) {
+            if (yytext[i] == '\n') {
+                loc.lines(1);
+                loc.end.column = 1;
+            } 
+            else {
+                loc.columns(1);
+            }
+        }
+    }
 %}
 
     /* Definitions */
@@ -51,8 +65,6 @@ hex_prefix "0x"
 base10_number {digit}+
 base16_number {hex_digit}+
 
-/* whitespace {[ \t\n\r]} */
-
 integer_literal	{base10_number}|{hex_prefix}{base16_number}
 
 /* 
@@ -61,7 +73,7 @@ escaped_char				[btnr\"\\]|x{hex_digit}{2}|(\n[ \t]*)
 escape_sequence				\\{escaped_char}
  */
 
-/* single_line_comment			"//"[^\0\n]* */
+single_line_comment			"\/\/"[^\0\n]*
 
 %%
 %{
@@ -71,6 +83,7 @@ escape_sequence				\\{escaped_char}
 
     /* Rules */
 {whitespace}                /* */
+{single_line_comment}       /* */
 {type_identifier}			return Parser::make_TYPE_IDENTIFIER(yytext, loc);
 {object_identifier}		    return Parser::make_OBJECT_IDENTIFIER(yytext, loc);
 

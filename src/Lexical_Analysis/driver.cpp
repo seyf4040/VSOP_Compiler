@@ -22,18 +22,18 @@ using namespace VSOP;
  * @brief Map a token type to a string.
  */
 static const map<Parser::token_type, string> type_to_string = {
-    {Parser::token::LOWERCASE_LETTER, "lowercase-letter"},
-    {Parser::token::UPPERCASE_LETTER, "uppercase-letter"},
-    {Parser::token::LETTER, "letter"},
-    {Parser::token::BIN_DIGIT, "bin-digit"},
-    {Parser::token::DIGIT, "digit"},
-    {Parser::token::HEX_DIGIT, "hex-digit"},
+    // {Parser::token::LOWERCASE_LETTER, "lowercase-letter"},
+    // {Parser::token::UPPERCASE_LETTER, "uppercase-letter"},
+    // {Parser::token::LETTER, "letter"},
+    // {Parser::token::BIN_DIGIT, "bin-digit"},
+    // {Parser::token::DIGIT, "digit"},
+    // {Parser::token::HEX_DIGIT, "hex-digit"},
 
-    {Parser::token::WHITESPACE, "whitespace"},
-    {Parser::token::TAB, "tab"},
-    {Parser::token::LF, "lf"},
-    {Parser::token::FF, "ff"},
-    {Parser::token::CR, "cr"},
+    // {Parser::token::WHITESPACE, "whitespace"},
+    // {Parser::token::TAB, "tab"},
+    // {Parser::token::LF, "lf"},
+    // {Parser::token::FF, "ff"},
+    // {Parser::token::CR, "cr"},
 
     {Parser::token::INTEGER_LITERAL, "integer-literal"},
 
@@ -62,9 +62,9 @@ static const map<Parser::token_type, string> type_to_string = {
     {Parser::token::OBJECT_IDENTIFIER, "object-identifier"},
 
     {Parser::token::STRING_LITERAL, "string-literal"},
-    {Parser::token::REGULAR_CHAR, "regular-char"},
-    {Parser::token::ESCAPED_CHAR, "escaped-char"},
-    {Parser::token::ESCAPE_SEQUENCE, "escape-sequence"},
+    // {Parser::token::REGULAR_CHAR, "regular-char"},
+    // {Parser::token::ESCAPED_CHAR, "escaped-char"},
+    // {Parser::token::ESCAPE_SEQUENCE, "escape-sequence"},
     
     {Parser::token::LBRACE, "lbrace"},
     {Parser::token::RBRACE, "rbrace"},
