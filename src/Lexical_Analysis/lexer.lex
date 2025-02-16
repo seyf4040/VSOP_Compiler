@@ -1,6 +1,7 @@
 %{
     /* Includes */
     #include <string>
+    #include <stack>
 
     #include "utils.hpp"
 
@@ -35,7 +36,7 @@
     void loc_update() {
         loc.step();
         for (int i = 0; i < yyleng; ++i) {
-            if (yytext[i] == '\n') {
+            if (yytext[i] == '\n' || yytext[i] == '\f') {
                 loc.lines(1);
                 loc.end.column = 1;
             } 
@@ -44,11 +45,33 @@
             }
         }
     }
+
+    // Stack to keep track of nested comments
+    std::stack<location> locStack;
+
+    void loc_push() {
+        locStack.push(loc);
+    }
+
+    void loc_pop() {
+        if (!locStack.empty()) {
+            loc = locStack.top();
+            locStack.pop();
+        }
+    }
+
+    void loc_pop_all() {
+        while (!locStack.empty()) {
+            cout << locStack.empty() << endl;
+            loc = locStack.top();  
+            locStack.pop();
+        }
+    }
 %}
 
     /* Definitions */
 
-blankspace					[ \t\n\r]
+blankspace					[ \t\n\r\f]
 whitespace					{blankspace}+
 
 lowercase_letter    [a-z]
@@ -75,6 +98,8 @@ escape_sequence				\\{escaped_char}
 
 single_line_comment			"\/\/"[^\0\n]*
 
+%x COMMENT STRING
+
 %%
 %{
     // Code run each time yylex is called.
@@ -84,6 +109,29 @@ single_line_comment			"\/\/"[^\0\n]*
     /* Rules */
 {whitespace}                /* */
 {single_line_comment}       /* */
+
+    /* KeyWords */
+"and"       return Parser::make_AND(loc);
+"bool"      return Parser::make_BOOL(loc);
+"class"     return Parser::make_CLASS(loc);
+"do"        return Parser::make_DO(loc);
+"else"      return Parser::make_ELSE(loc);
+"extends"   return Parser::make_EXTENDS(loc);
+"false"     return Parser::make_FALSE(loc);
+"if"        return Parser::make_IF(loc);
+"in"        return Parser::make_IN(loc);
+"int32"     return Parser::make_INT32(loc);
+"isnull"    return Parser::make_ISNULL(loc);
+"let"       return Parser::make_LET(loc);
+"new"       return Parser::make_NEW(loc);
+"not"       return Parser::make_NOT(loc);
+"self"      return Parser::make_SELF(loc);
+"string"    return Parser::make_STRING(loc);
+"then"      return Parser::make_THEN(loc);
+"true"      return Parser::make_TRUE(loc);
+"unit"      return Parser::make_UNIT(loc);
+"while"     return Parser::make_WHILE(loc);
+
 {type_identifier}			return Parser::make_TYPE_IDENTIFIER(yytext, loc);
 {object_identifier}		    return Parser::make_OBJECT_IDENTIFIER(yytext, loc);
 
@@ -94,6 +142,10 @@ single_line_comment			"\/\/"[^\0\n]*
     else
         return Parser::make_INTEGER_LITERAL(res, loc);}
 
+"(*"						loc_push(); BEGIN(COMMENT);
+\"                          loc_push(); BEGIN(STRING);
+                        
+    /* Operators */
 "{"         return Parser::make_LBRACE(loc);
 "}"         return Parser::make_RBRACE(loc);
 "("         return Parser::make_LPAR(loc);
@@ -108,16 +160,35 @@ single_line_comment			"\/\/"[^\0\n]*
 "^"         return Parser::make_POW(loc);
 "."         return Parser::make_DOT(loc);
 "="         return Parser::make_EQUAL(loc);
-"<"         return Parser::make_LOWER(loc);
 "<="        return Parser::make_LOWER_EQUAL(loc);
 "<-"        return Parser::make_ASSIGN(loc);
+"<"         return Parser::make_LOWER(loc);
+
+<COMMENT>"(*"       loc_push();
+<COMMENT>"*)"       loc_pop(); if (locStack.empty()) BEGIN(INITIAL);
+<COMMENT>[^\0]		    /* */
+<COMMENT><<EOF>>    {
+                        loc_pop_all();
+                        print_error(loc.begin, "lexical error: Reached end of file while multiline comment not terminated." );
+                        return Parser::make_YYerror(loc);
+                    }
+
+
+
+<STRING>\"         loc_pop();
+<STRING>\"       loc_pop(); if (locStack.empty()) BEGIN(INITIAL);
+<STRING><<EOF>>    {
+                        loc_pop_all();
+                        print_error(loc.begin, "lexical error: Reached end of file inside string-literal." );
+                        return Parser::make_YYerror(loc);
+                    }
 
 
     /* Invalid characters */
 .           {
                 print_error(loc.begin, "invalid character: " + string(yytext));
                 return Parser::make_YYerror(loc);
-}
+            }
     
     /* End of file */
 <<EOF>>     return Parser::make_YYEOF(loc);
