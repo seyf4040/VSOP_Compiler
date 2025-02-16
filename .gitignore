@@ -42,3 +42,8 @@ parser.cpp
 parser.hpp
 vsopc
 # examples/
+
+# Submission files
+vsopcompiler/
+*.tar
+*.tar.xz

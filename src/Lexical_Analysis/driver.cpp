@@ -96,8 +96,8 @@ static void print_token(Parser::symbol_type token)
     position pos = token.location.begin;
     Parser::token_type type = (Parser::token_type)token.type_get();
 
-    cout << pos.line << ":"
-         << pos.column << ":"
+    cout << pos.line << ","
+         << pos.column << ","
          << type_to_string.at(type);
 
     switch (type)
@@ -105,7 +105,7 @@ static void print_token(Parser::symbol_type token)
     case Parser::token::INTEGER_LITERAL:
     {
         int value = token.value.as<int>();
-        cout << ":" << value;
+        cout << "," << value;
         break;
     }
 
@@ -113,14 +113,14 @@ static void print_token(Parser::symbol_type token)
     case Parser::token::OBJECT_IDENTIFIER:
     {
         string id = token.value.as<string>();
-        cout << ":" << id;
+        cout << "," << id;
         break;
     }
 
     case Parser::token::STRING_LITERAL:
     {
         string str = token.value.as<string>();
-        cout << ":" << str;
+        cout << "," << "\"" << str << "\"";
         break;
     }
 

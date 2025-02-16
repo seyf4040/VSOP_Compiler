@@ -30,14 +30,17 @@ int stringToInt(const std::string& str) {
 
 std::string escapedToChar(char* escapedSequence) {
     switch(escapedSequence[1]) {
-		case 'x': return std::to_string(std::strtol(escapedSequence, NULL, 16));
+		case 'x': 
+            {
+                return std::string("\\x") + &escapedSequence[2];
+            }
 		case 'b': return charToHex('\b');
 		case 't': return charToHex('\t');
 		case 'n': return charToHex('\n');
 		case 'r': return charToHex('\r');
         case '\\': return charToHex('\\');
         case '\"': return charToHex('\"');
-		default: return "";
+		default: return "invalid";
 	}  
 }
 

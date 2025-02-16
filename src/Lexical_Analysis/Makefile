@@ -28,14 +28,15 @@ utils.o: utils.hpp
 $(EXEC): $(OBJ)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJ)
 
-parser.cpp: parser.y
-	bison $(BISONFLAGS) -o parser.cpp $^
-
-parser.hpp: parser.y
+parser.cpp parser.hpp: parser.y
 	bison $(BISONFLAGS) -o parser.cpp $^
 
 lexer.cpp: lexer.lex
 	flex $(LEXFLAGS) -o lexer.cpp $^
+
+install-tools:
+	@which flex > /dev/null || (echo "Installing flex..." && sudo apt-get install -y flex)
+	@which bison > /dev/null || (echo "Installing bison..." && sudo apt-get install -y bison)
 
 clean:
 	@rm -f $(EXEC)
@@ -43,4 +44,4 @@ clean:
 	@rm -f lexer.cpp
 	@rm -f parser.cpp parser.hpp location.hh
 
-.PHONY: clean
+.PHONY: clean install-tools

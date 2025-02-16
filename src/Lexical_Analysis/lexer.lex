@@ -57,8 +57,11 @@
 
     void loc_pop() {
         if (!locStack.empty()) {
-            loc = locStack.top();
+            location last = locStack.top();
             locStack.pop();
+
+            loc.begin.line = last.begin.line;
+            loc.begin.column = last.begin.column;
         }
     }
 
@@ -104,7 +107,7 @@ single_line_comment			"\/\/"[^\0\n]*
 %%
 %{
     // Code run each time yylex is called.
-    loc.step();
+    // loc.step();
 %}
 
     /* Rules */
@@ -156,13 +159,14 @@ single_line_comment			"\/\/"[^\0\n]*
                                         int res = stringToInt(literal);
                                         if (res < 0) {
                                             print_error(loc.begin, "invalid integer: " + literal);
+                                            return Parser::make_YYerror(loc);
                                         } else {
                                             return Parser::make_INTEGER_LITERAL(res, loc);
                                         }
                                     }
 
 "(*"						loc_push(); BEGIN(COMMENT);
-\"                          stringBuffer = ""; BEGIN(STRING);
+\"                          loc_push(); stringBuffer = ""; BEGIN(STRING);
                         
     /* Operators */
 "{"         return Parser::make_LBRACE(loc);
@@ -183,32 +187,46 @@ single_line_comment			"\/\/"[^\0\n]*
 "<-"        return Parser::make_ASSIGN(loc);
 "<"         return Parser::make_LOWER(loc);
 
-<COMMENT>"(*"       loc_push();
+<COMMENT>"(*"       loc_push(); 
 <COMMENT>"*)"       loc_pop(); if (locStack.empty()) BEGIN(INITIAL);
-<COMMENT>[^\0]		    /* */
+<COMMENT>[^\0]		/* */
 <COMMENT><<EOF>>    {
-                        loc_pop_all();
-                        print_error(loc.begin, "Reached EOF while inside multiline comment." );
+                        loc_pop();
+                        print_error(loc.begin, "unterminated multiline comment." );
                         BEGIN(INITIAL);
                         return Parser::make_YYerror(loc);
                     }
 
-<STRING>\"         {                      
+<STRING>\"          {   
+                        loc_pop();                   
                         BEGIN(INITIAL);
                         return Parser::make_STRING_LITERAL(stringBuffer, loc);
                     }
 <STRING>{regular_char}+     stringBuffer += yytext;
-<STRING>{escaped_char}   {
-                                // if(yytext[1] == '\\') stringBuffer += "x5C";
-                                // else if(yytext[1] != '\n') 
-                                //     stringBuffer += escapedToChar(yytext);
-
-                                if(yytext[1] != '\n') 
-                                    stringBuffer += escapedToChar(yytext);
+<STRING>{escaped_char}      {
+                                if(yytext[1] != '\n') {
+                                    std::string tmp = escapedToChar(yytext);
+                                    if(tmp == "invalid") {
+                                        loc_pop();
+                                        print_error(loc.begin, "invalid escaped char.");
+                                        return Parser::make_YYerror(loc);
+                                    }
+                                    stringBuffer += tmp;
+                                }
                             }
+<STRING>\\          {
+                        print_error(loc.begin, "invalid escape sequence.");
+                        return Parser::make_YYerror(loc);
+                    }
 
-<STRING><<EOF>>    {
-                        print_error(loc.begin, "Reached EOF inside string-literal." );
+<STRING>\n          {
+                        print_error(loc.begin, "raw line feed in string literal.");
+                        return Parser::make_YYerror(loc);
+                    }
+
+<STRING><<EOF>>     {   
+                        loc_pop();
+                        print_error(loc.begin, "unterminated string." );
                         BEGIN(INITIAL);
                         return Parser::make_YYerror(loc);
                     }
@@ -231,8 +249,9 @@ static void print_error(const position &pos, const string &m)
     cerr << *(pos.filename) << ":"
          << pos.line << ":"
          << pos.column << ":"
-         << " lexical error: "
-         << m
+         << " lexical error"
+         /* << ": "
+         << m */
          << endl;
 }
 
