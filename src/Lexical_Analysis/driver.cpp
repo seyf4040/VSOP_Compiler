@@ -14,6 +14,7 @@
 
 #include "driver.hpp"
 #include "parser.hpp"
+#include "utils.hpp"
 
 using namespace std;
 using namespace VSOP;
@@ -110,10 +111,16 @@ static void print_token(Parser::symbol_type token)
 
     case Parser::token::TYPE_IDENTIFIER:
     case Parser::token::OBJECT_IDENTIFIER:
-    case Parser::token::STRING_LITERAL:
     {
         string id = token.value.as<string>();
         cout << ":" << id;
+        break;
+    }
+
+    case Parser::token::STRING_LITERAL:
+    {
+        string str = token.value.as<string>();
+        cout << ":" << str;
         break;
     }
 

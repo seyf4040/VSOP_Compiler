@@ -1,5 +1,12 @@
 #include "utils.hpp"
+
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+#include <string>
 #include <stdexcept>
+
+std::string charToHex(char ch);
 
 
 int stringToInt(const std::string& str) {
@@ -12,3 +19,21 @@ int stringToInt(const std::string& str) {
     }
 }
 
+std::string escapedToChar(char* escapedSequence) {
+    switch(escapedSequence[1]) {
+		case 'x': return std::to_string(std::strtol(escapedSequence, NULL, 16));
+		case 'b': return charToHex('\b');
+		case 't': return charToHex('\t');
+		case 'n': return charToHex('\n');
+		case 'r': return charToHex('\r');
+        case '\\': return charToHex('\\');
+        case '\"': return charToHex('\"');
+		default: return "";
+	}  
+}
+
+std::string charToHex(char ch) {
+    std::ostringstream oss;
+    oss << "\\x" << std::hex << std::setw(2) << std::setfill('0') << (static_cast<int>(ch) & 0xFF);
+    return oss.str();
+}

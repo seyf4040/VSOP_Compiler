@@ -36,7 +36,7 @@
     void loc_update() {
         loc.step();
         for (int i = 0; i < yyleng; ++i) {
-            if (yytext[i] == '\n' || yytext[i] == '\f') {
+            if (yytext[i] == '\n' || yytext[i] == '\f') { 
                 loc.lines(1);
                 loc.end.column = 1;
             } 
@@ -45,6 +45,8 @@
             }
         }
     }
+    // Stream to build full String
+    std::string stringBuffer;
 
     // Stack to keep track of nested comments
     std::stack<location> locStack;
@@ -62,7 +64,7 @@
 
     void loc_pop_all() {
         while (!locStack.empty()) {
-            cout << locStack.empty() << endl;
+            // cout << locStack.empty() << endl;
             loc = locStack.top();  
             locStack.pop();
         }
@@ -90,11 +92,10 @@ base16_number {hex_digit}+
 
 integer_literal	{base10_number}|{hex_prefix}{base16_number}
 
-/* 
+
 regular_char				[^\0\n\"\\]
-escaped_char				[btnr\"\\]|x{hex_digit}{2}|(\n[ \t]*)
-escape_sequence				\\{escaped_char}
- */
+escape_sequence				[btnr\"\\]|x{hex_digit}{2}|(\n[ \t]*)
+escaped_char				\\{escape_sequence}
 
 single_line_comment			"\/\/"[^\0\n]*
 
@@ -143,7 +144,7 @@ single_line_comment			"\/\/"[^\0\n]*
         return Parser::make_INTEGER_LITERAL(res, loc);}
 
 "(*"						loc_push(); BEGIN(COMMENT);
-\"                          loc_push(); BEGIN(STRING);
+\"                          loc_push(); stringBuffer = ""; BEGIN(STRING);
                         
     /* Operators */
 "{"         return Parser::make_LBRACE(loc);
@@ -173,12 +174,22 @@ single_line_comment			"\/\/"[^\0\n]*
                         return Parser::make_YYerror(loc);
                     }
 
+<STRING>\"         {                     
+                        loc_pop(); 
+                        BEGIN(INITIAL);
+                        return Parser::make_STRING_LITERAL(stringBuffer, loc);
+                    }
+<STRING>{regular_char}+     stringBuffer += yytext;
+<STRING>{escaped_char}   {
+                                // if(yytext[1] == '\\') stringBuffer += "x5C";
+                                // else if(yytext[1] != '\n') 
+                                //     stringBuffer += escapedToChar(yytext);
 
+                                if(yytext[1] != '\n') 
+                                    stringBuffer += escapedToChar(yytext);
+                            }
 
-<STRING>\"         loc_pop();
-<STRING>\"       loc_pop(); if (locStack.empty()) BEGIN(INITIAL);
 <STRING><<EOF>>    {
-                        loc_pop_all();
                         print_error(loc.begin, "lexical error: Reached end of file inside string-literal." );
                         return Parser::make_YYerror(loc);
                     }
