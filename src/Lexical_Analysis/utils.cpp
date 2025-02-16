@@ -10,12 +10,21 @@ std::string charToHex(char ch);
 
 
 int stringToInt(const std::string& str) {
+    // std::cout << str <<  std::endl;
     try {
         size_t idx = 0;
-        int base = (str.find("0x") == 0 || str.find("0X") == 0) ? 16 : 10;
-        return std::stoi(str, &idx, base);
+        int base = (str.find("0x") == 0) ? 16 : 10;
+        int val = std::stoi(str, &idx, base);
+
+        if (idx != str.length()) {
+            return -1;
+        }
+
+        return val;
+
     } catch (const std::exception& e) {
         throw std::invalid_argument("Invalid input string: " + str);
+        return -1;
     }
 }
 

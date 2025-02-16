@@ -88,9 +88,9 @@ hex_digit {digit}|[a-f]|[A-F]
 
 hex_prefix "0x"
 base10_number {digit}+
-base16_number {hex_digit}+
+base16_number {hex_prefix}{hex_digit}+
 
-integer_literal	{base10_number}|{hex_prefix}{base16_number}
+integer_literal	{base10_number}|{base16_number}
 
 
 regular_char				[^\0\n\"\\]
@@ -136,15 +136,33 @@ single_line_comment			"\/\/"[^\0\n]*
 {type_identifier}			return Parser::make_TYPE_IDENTIFIER(yytext, loc);
 {object_identifier}		    return Parser::make_OBJECT_IDENTIFIER(yytext, loc);
 
-{integer_literal} {
-    int res = stringToInt(yytext);
-    if (res < 0) 
-        print_error(loc.begin, "integer overflow: " + string(yytext));   
-    else
-        return Parser::make_INTEGER_LITERAL(res, loc);}
+{integer_literal}{base_identifier}* {
+                                        std::string literal(yytext);
+                                        // cout << literal <<  endl;
+                                        // Detect invalid hexadecimal literals
+                                        if (literal.find("0x") == 0) {
+                                            size_t valid_length = 2; // Start after "0x"
+                                            while (valid_length < literal.length() && isxdigit(literal[valid_length])) {
+                                                ++valid_length;
+                                            }
+
+                                            // If there are non-hex characters immediately after valid hex digits, it's an error
+                                            if (valid_length < literal.length() || valid_length == 2) {
+                                                print_error(loc.begin, "invalid hexadecimal literal: " + literal);
+                                                return Parser::make_YYerror(loc);
+                                            }
+                                        }
+
+                                        int res = stringToInt(literal);
+                                        if (res < 0) {
+                                            print_error(loc.begin, "invalid integer: " + literal);
+                                        } else {
+                                            return Parser::make_INTEGER_LITERAL(res, loc);
+                                        }
+                                    }
 
 "(*"						loc_push(); BEGIN(COMMENT);
-\"                          loc_push(); stringBuffer = ""; BEGIN(STRING);
+\"                          stringBuffer = ""; BEGIN(STRING);
                         
     /* Operators */
 "{"         return Parser::make_LBRACE(loc);
@@ -170,12 +188,12 @@ single_line_comment			"\/\/"[^\0\n]*
 <COMMENT>[^\0]		    /* */
 <COMMENT><<EOF>>    {
                         loc_pop_all();
-                        print_error(loc.begin, "lexical error: Reached end of file while multiline comment not terminated." );
+                        print_error(loc.begin, "Reached EOF while inside multiline comment." );
+                        BEGIN(INITIAL);
                         return Parser::make_YYerror(loc);
                     }
 
-<STRING>\"         {                     
-                        loc_pop(); 
+<STRING>\"         {                      
                         BEGIN(INITIAL);
                         return Parser::make_STRING_LITERAL(stringBuffer, loc);
                     }
@@ -190,7 +208,8 @@ single_line_comment			"\/\/"[^\0\n]*
                             }
 
 <STRING><<EOF>>    {
-                        print_error(loc.begin, "lexical error: Reached end of file inside string-literal." );
+                        print_error(loc.begin, "Reached EOF inside string-literal." );
+                        BEGIN(INITIAL);
                         return Parser::make_YYerror(loc);
                     }
 
