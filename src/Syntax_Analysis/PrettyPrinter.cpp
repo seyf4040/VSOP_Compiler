@@ -17,21 +17,7 @@ void PrettyPrinter::print(const Program* program) {
         first = false;
         cls->accept(this);
     }
-    os << "]" << std::endl;
-}
-
-void PrettyPrinter::indent() {
-    for (int i = 0; i < indent_level; ++i) {
-        os << "  ";
-    }
-}
-
-void PrettyPrinter::increase_indent() {
-    indent_level++;
-}
-
-void PrettyPrinter::decrease_indent() {
-    indent_level--;
+    os << "]";
 }
 
 void PrettyPrinter::visit(const Class* node) {
@@ -231,19 +217,6 @@ std::string PrettyPrinter::escape_string(const std::string& str) {
         }
     }
     return result.str();
-}
-
-void PrettyPrinter::print_expression_list(const std::vector<std::shared_ptr<Expression>>& expressions) {
-    os << "[";
-    bool first = true;
-    for (const auto& expr : expressions) {
-        if (!first) {
-            os << ", ";
-        }
-        first = false;
-        expr->accept(this);
-    }
-    os << "]";
 }
 
 } // namespace VSOP

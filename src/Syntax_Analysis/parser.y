@@ -120,12 +120,14 @@
 %type <std::string> type
 
 // Precedence and associativity
+%right "in"
+%right "<-"      // Assignment is right-associative
 %left "and"
-%left "=" "<" "<="
+%nonassoc "=" "<" "<="
 %left "+" "-"
 %left "*" "/"
-%left "^"
-%precedence UNARY  // give precedence to unary minus
+%right "^"
+%precedence UNARY  // give precedence to unary operators
 %left "."
 
 %%
@@ -255,20 +257,20 @@ expr_list:
 ;
 
 expr:
-    "if" expr "then" expr {
-        $$ = std::make_shared<If>($2, $4);
-    }
-  | "if" expr "then" expr "else" expr {
+    "if" expr "then" expr "else" expr {
         $$ = std::make_shared<If>($2, $4, $6);
+    }
+  | "if" expr "then" expr {
+        $$ = std::make_shared<If>($2, $4);
     }
   | "while" expr "do" expr {
         $$ = std::make_shared<While>($2, $4);
     }
-  | "let" OBJECT_IDENTIFIER ":" type "in" expr {
-        $$ = std::make_shared<Let>($2, $4, $6);
-    }
   | "let" OBJECT_IDENTIFIER ":" type "<-" expr "in" expr {
         $$ = std::make_shared<Let>($2, $4, $6, $8);
+    }
+  | "let" OBJECT_IDENTIFIER ":" type "in" expr {
+        $$ = std::make_shared<Let>($2, $4, $6);
     }
   | OBJECT_IDENTIFIER "<-" expr {
         $$ = std::make_shared<Assign>($1, $3);
