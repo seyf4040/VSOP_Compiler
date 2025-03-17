@@ -165,21 +165,29 @@ class_list:
 // ;
 
 class:
-    "class" TYPE_IDENTIFIER class_extends class_body {
+    "class" TYPE_IDENTIFIER class_extends 
+    {
         std::cerr << "DEBUG: In class rule, creating class " << $2 << std::endl;
-        $$ = $3;  // $3 contains the Class object from class_extends
+        auto cls = $3;  // $3 contains the Class object from class_extends
         
-        if (!$$) {
+        if (!cls) {
             std::cerr << "ERROR: Class object from class_extends is null!" << std::endl;
-            $$ = std::make_shared<Class>($2, "Object"); // Create a new one as fallback
+            cls = std::make_shared<Class>($2, "Object"); // Create a new one as fallback
         } else {
-            $$->name = $2;
-            std::cerr << "DEBUG: Set class name to " << $$->name << std::endl;
+            cls->name = $2;
+            std::cerr << "DEBUG: Set class name to " << cls->name << std::endl;
         }
         
-        std::cerr << "DEBUG: About to call driver.add_class()" << std::endl;
-        driver.add_class($$);
-        std::cerr << "DEBUG: After driver.add_class()" << std::endl;
+        // Set current_class BEFORE parsing class_body
+        driver.current_class = cls;
+        std::cerr << "DEBUG: Set driver.current_class to " << cls->name << std::endl;
+    } 
+    class_body 
+    {
+        // Now set the final semantic value but DON'T add it to program
+        $$ = driver.current_class;
+        std::cerr << "DEBUG: Class body parsed" << std::endl;
+        // Remove the call to driver.add_class here
     }
 ;
 
