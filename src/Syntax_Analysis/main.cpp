@@ -37,7 +37,6 @@ int main(int argc, char const *argv[])
     signal(SIGSEGV, segfault_handler);
     Mode mode;
     string source_file;
-    std::cerr << "DEBUG: Starting main" << std::endl;
     
     if (argc == 2)
     {
@@ -60,9 +59,7 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
-    std::cerr << "DEBUG: Mode is PARSE, source_file is " << source_file << std::endl;
     VSOP::Driver driver = VSOP::Driver(source_file);
-    std::cerr << "DEBUG: Driver created" << std::endl;
     int res;
     
     switch (mode)
@@ -74,11 +71,8 @@ int main(int argc, char const *argv[])
         
     case Mode::PARSE:
         res = driver.parse();
-        std::cerr << "DEBUG: parse() returned " << res << std::endl;
         if (res == 0)
-            std::cerr << "DEBUG: About to call print_ast()" << std::endl;
             driver.print_ast();
-            std::cerr << "DEBUG: After print_ast()" << std::endl;
         return res;
     }
     

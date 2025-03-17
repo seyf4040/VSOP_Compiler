@@ -42,6 +42,7 @@ private:
     void visit(const Self* node) override;
     void visit(const Block* node) override;
     
+    std::string format_string_literal(const std::string& str);
     std::string escape_string(const std::string& str);
     void print_expression_list(const std::vector<std::shared_ptr<Expression>>& expressions);
 };

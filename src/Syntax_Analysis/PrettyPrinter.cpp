@@ -5,24 +5,17 @@
 
 namespace VSOP {
 
-PrettyPrinter::PrettyPrinter(std::ostream& os) : os(os) {
-    std::cerr << "DEBUG: PrettyPrinter constructor called" << std::endl;
-}
+PrettyPrinter::PrettyPrinter(std::ostream& os) : os(os) {}
 
 void PrettyPrinter::print(const Program* program) {
-    std::cerr << "DEBUG: PrettyPrinter::print called" << std::endl;
     if (!program) {
-        std::cerr << "ERROR: Program is null in PrettyPrinter::print" << std::endl;
         os << "[]";
         return;
     }
 
-    std::cerr << "DEBUG: Program has " << program->classes.size() << " classes" << std::endl;
-    
     os << "[";
     bool first = true;
     for (size_t i = 0; i < program->classes.size(); i++) {
-        std::cerr << "DEBUG: Processing class " << i << std::endl;
         const auto& cls = program->classes[i];
         
         if (!cls) {
@@ -31,27 +24,22 @@ void PrettyPrinter::print(const Program* program) {
         }
         
         if (!first) {
-            os << ",\n";
+            os << ",\n ";
         }
         first = false;
         
-        std::cerr << "DEBUG: About to call accept() on class " << cls->name << std::endl;
         cls->accept(this);
-        std::cerr << "DEBUG: Finished calling accept() on class " << cls->name << std::endl;
     }
     os << "]";
-    std::cerr << "DEBUG: PrettyPrinter::print finished" << std::endl;
 }
 
 void PrettyPrinter::visit(const Class* node) {
-    std::cerr << "DEBUG: PrettyPrinter::visit(Class) called" << std::endl;
     if (!node) {
         std::cerr << "ERROR: Class node is null in PrettyPrinter::visit" << std::endl;
         return;
     }
     
-    std::cerr << "DEBUG: Class name=" << node->name << ", parent=" << node->parent << std::endl;
-    os << "Class(" << node->name << ", " << node->parent << ", [";
+    os << "Class(" << node->name << ", " << node->parent << ",\n   [";
     
     bool first = true;
     for (const auto& field : node->fields) {
@@ -61,13 +49,18 @@ void PrettyPrinter::visit(const Class* node) {
         }
         
         if (!first) {
-            os << ", ";
+            os << ",\n    ";
+        } else {
+            os << "\n    ";
         }
         first = false;
         field->accept(this);
     }
     
-    os << "], [";
+    if (!first) {
+        os << "\n   ";
+    }
+    os << "],\n   [";
     
     first = true;
     for (const auto& method : node->methods) {
@@ -77,18 +70,21 @@ void PrettyPrinter::visit(const Class* node) {
         }
         
         if (!first) {
-            os << ", ";
+            os << ",\n    ";
+        } else {
+            os << "\n    ";
         }
         first = false;
         method->accept(this);
     }
     
+    if (!first) {
+        os << "\n   ";
+    }
     os << "])";
-    std::cerr << "DEBUG: PrettyPrinter::visit(Class) finished" << std::endl;
 }
 
 void PrettyPrinter::visit(const Field* node) {
-    std::cerr << "DEBUG: PrettyPrinter::visit(Field) called" << std::endl;
     if (!node) {
         std::cerr << "ERROR: Field node is null" << std::endl;
         return;
@@ -100,11 +96,9 @@ void PrettyPrinter::visit(const Field* node) {
         node->init_expr->accept(this);
     }
     os << ")";
-    std::cerr << "DEBUG: PrettyPrinter::visit(Field) finished" << std::endl;
 }
 
 void PrettyPrinter::visit(const Method* node) {
-    std::cerr << "DEBUG: PrettyPrinter::visit(Method) called" << std::endl;
     if (!node) {
         std::cerr << "ERROR: Method node is null" << std::endl;
         return;
@@ -126,15 +120,29 @@ void PrettyPrinter::visit(const Method* node) {
         formal->accept(this);
     }
     
-    os << "], " << node->return_type << ", ";
+    os << "], " << node->return_type << ",\n      ";
     if (node->body) {
-        node->body->accept(this);
+        // Always wrap method body expressions in brackets
+        os << "[";
+        bool firstExpr = true;
+        for (const auto& expr : node->body->expressions) {
+            if (!expr) {
+                std::cerr << "ERROR: Expression in Method body is null!" << std::endl;
+                continue;
+            }
+            
+            if (!firstExpr) {
+                os << ",\n       ";
+            }
+            firstExpr = false;
+            expr->accept(this);
+        }
+        os << "]";
     } else {
         std::cerr << "ERROR: Method body is null!" << std::endl;
         os << "[]"; // Empty body as fallback
     }
     os << ")";
-    std::cerr << "DEBUG: PrettyPrinter::visit(Method) finished" << std::endl;
 }
 
 void PrettyPrinter::visit(const Formal* node) {
@@ -147,7 +155,6 @@ void PrettyPrinter::visit(const Formal* node) {
 }
 
 void PrettyPrinter::visit(const BinaryOp* node) {
-    std::cerr << "DEBUG: PrettyPrinter::visit(BinaryOp) called" << std::endl;
     if (!node) {
         std::cerr << "ERROR: BinaryOp node is null" << std::endl;
         return;
@@ -168,7 +175,6 @@ void PrettyPrinter::visit(const BinaryOp* node) {
         os << "null";
     }
     os << ")";
-    std::cerr << "DEBUG: PrettyPrinter::visit(BinaryOp) finished" << std::endl;
 }
 
 void PrettyPrinter::visit(const UnaryOp* node) {
@@ -327,7 +333,7 @@ void PrettyPrinter::visit(const StringLiteral* node) {
         return;
     }
     
-    os << "\"" << escape_string(node->value) << "\"";
+    os << "\"" << format_string_literal(node->value) << "\"";
 }
 
 void PrettyPrinter::visit(const IntegerLiteral* node) {
@@ -376,38 +382,32 @@ void PrettyPrinter::visit(const Self* node) {
 }
 
 void PrettyPrinter::visit(const Block* node) {
-    std::cerr << "DEBUG: PrettyPrinter::visit(Block) called" << std::endl;
     if (!node) {
         std::cerr << "ERROR: Block node is null" << std::endl;
         os << "[]";
         return;
     }
     
-    std::cerr << "DEBUG: Block has " << node->expressions.size() << " expressions" << std::endl;
-    
-    if (node->expressions.size() == 1 && node->expressions[0]) {
-        node->expressions[0]->accept(this);
-    } else {
-        os << "[";
-        bool first = true;
-        for (const auto& expr : node->expressions) {
-            if (!expr) {
-                std::cerr << "ERROR: Expression in Block is null!" << std::endl;
-                continue;
-            }
-            
-            if (!first) {
-                os << ", ";
-            }
-            first = false;
-            expr->accept(this);
+    os << "[";
+    bool first = true;
+    for (const auto& expr : node->expressions) {
+        if (!expr) {
+            std::cerr << "ERROR: Expression in Block is null!" << std::endl;
+            continue;
         }
-        os << "]";
+        
+        if (!first) {
+            os << ", ";
+        }
+        first = false;
+        expr->accept(this);
     }
-    std::cerr << "DEBUG: PrettyPrinter::visit(Block) finished" << std::endl;
+    os << "]";
 }
 
-std::string PrettyPrinter::escape_string(const std::string& str) {
+// Format the string literal for printing in the AST
+// This is directly using escaped sequences in the format the reference compiler expects
+std::string PrettyPrinter::format_string_literal(const std::string& str) {
     std::ostringstream result;
     for (char c : str) {
         if (c == '\n') {
@@ -429,6 +429,11 @@ std::string PrettyPrinter::escape_string(const std::string& str) {
         }
     }
     return result.str();
+}
+
+std::string PrettyPrinter::escape_string(const std::string& str) {
+    // Same implementation as format_string_literal for now
+    return format_string_literal(str);
 }
 
 } // namespace VSOP
