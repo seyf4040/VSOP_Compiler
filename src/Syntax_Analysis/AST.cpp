@@ -1,18 +1,34 @@
 #include "AST.hpp"
+#include <iostream>
 
 namespace VSOP {
 
 void Program::accept(Visitor* visitor) const {
-    for (const auto& cls : classes) {
-        cls->accept(visitor);
+    std::cerr << "DEBUG: Program::accept called with " << classes.size() << " classes" << std::endl;
+    for (size_t i = 0; i < classes.size(); i++) {
+        std::cerr << "DEBUG: Accepting class " << i << std::endl;
+        if (!classes[i]) {
+            std::cerr << "ERROR: Class " << i << " is null in Program::accept!" << std::endl;
+            continue;
+        }
+        classes[i]->accept(visitor);
     }
+    std::cerr << "DEBUG: Program::accept finished" << std::endl;
 }
 
 Class::Class(const std::string& name, const std::string& parent)
-    : name(name), parent(parent) {}
+    : name(name), parent(parent) {
+    std::cerr << "DEBUG: Class constructor: name=" << name << ", parent=" << parent << std::endl;
+}
 
 void Class::accept(Visitor* visitor) const {
+    std::cerr << "DEBUG: Class::accept called for " << name << std::endl;
+    if (!visitor) {
+        std::cerr << "ERROR: Visitor is null in Class::accept!" << std::endl;
+        return;
+    }
     visitor->visit(this);
+    std::cerr << "DEBUG: Class::accept finished" << std::endl;
 }
 
 Field::Field(const std::string& name, const std::string& type, std::shared_ptr<Expression> init_expr)
@@ -45,7 +61,11 @@ void Block::accept(Visitor* visitor) const {
 }
 
 BinaryOp::BinaryOp(const std::string& op, std::shared_ptr<Expression> left, std::shared_ptr<Expression> right)
-    : op(op), left(left), right(right) {}
+    : op(op), left(left), right(right) {
+    std::cerr << "DEBUG: BinaryOp constructor: op=" << op << std::endl;
+    if (!left) std::cerr << "WARNING: left is null in BinaryOp constructor" << std::endl;
+    if (!right) std::cerr << "WARNING: right is null in BinaryOp constructor" << std::endl;
+}
 
 void BinaryOp::accept(Visitor* visitor) const {
     visitor->visit(this);

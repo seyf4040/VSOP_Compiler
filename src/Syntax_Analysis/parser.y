@@ -119,16 +119,28 @@
 %type <std::shared_ptr<Block>> block
 %type <std::string> type
 
-// Precedence and associativity
-%right "in"
-%right "<-"      // Assignment is right-associative
-%left "and"
-%nonassoc "=" "<" "<="
-%left "+" "-"
-%left "*" "/"
-%right "^"
-%precedence UNARY  // give precedence to unary operators
-%left "."
+// Precedence and associativity according to VSOP language spec
+// From lowest to highest precedence
+// %right "<-"          // Precedence 9, right-associative
+// %left "and"          // Precedence 8, left-associative
+// %nonassoc "=" "<" "<="  // Precedence 6, non-associative
+// %left "+" "-"        // Precedence 5, left-associative
+// %left "*" "/"        // Precedence 4, left-associative
+// %right "^"           // Precedence 2, right-associative
+// %precedence "not"     // Precedence 7, right-associative
+// %precedence UMINUS    // Precedence 3, right-associative 
+// %precedence "isnull"  // Precedence 3, right-associative
+// %left "."            // Precedence 1, left-associative (highest)
+%right "<-"          // Precedence 9, right-associative
+%left "and"          // Precedence 8, left-associative
+%right "not"         // Precedence 7, right-associative
+%nonassoc "=" "<" "<="  // Precedence 6, non-associative
+%left "+" "-"        // Precedence 5, left-associative
+%left "*" "/"        // Precedence 4, left-associative
+%right UMINUS        // Precedence 3, right-associative (unary minus)
+%right "isnull"      // Precedence 3, right-associative
+%right "^"           // Precedence 2, right-associative
+%left "."            // Precedence 1, left-associative (highest)
 
 %%
 // Grammar rules
@@ -145,25 +157,65 @@ class_list:
     }
 ;
 
+// class:
+//     "class" TYPE_IDENTIFIER class_extends class_body {
+//         $$ = $3;
+//         $$->name = $2;
+//     }
+// ;
+
 class:
     "class" TYPE_IDENTIFIER class_extends class_body {
-        $$ = $3;
-        $$->name = $2;
+        std::cerr << "DEBUG: In class rule, creating class " << $2 << std::endl;
+        $$ = $3;  // $3 contains the Class object from class_extends
+        
+        if (!$$) {
+            std::cerr << "ERROR: Class object from class_extends is null!" << std::endl;
+            $$ = std::make_shared<Class>($2, "Object"); // Create a new one as fallback
+        } else {
+            $$->name = $2;
+            std::cerr << "DEBUG: Set class name to " << $$->name << std::endl;
+        }
+        
+        std::cerr << "DEBUG: About to call driver.add_class()" << std::endl;
+        driver.add_class($$);
+        std::cerr << "DEBUG: After driver.add_class()" << std::endl;
     }
 ;
+
+// class_extends:
+//     /* empty */ {
+//         $$ = std::make_shared<Class>("placeholder", "Object");
+//     }
+//   | "extends" TYPE_IDENTIFIER {
+//         $$ = std::make_shared<Class>("placeholder", $2);
+//     }
+// ;
 
 class_extends:
     /* empty */ {
+        std::cerr << "DEBUG: Creating class with default parent Object" << std::endl;
         $$ = std::make_shared<Class>("placeholder", "Object");
+        std::cerr << "DEBUG: Created class with name " << $$->name << " and parent " << $$->parent << std::endl;
     }
   | "extends" TYPE_IDENTIFIER {
+        std::cerr << "DEBUG: Creating class with parent " << $2 << std::endl;
         $$ = std::make_shared<Class>("placeholder", $2);
+        std::cerr << "DEBUG: Created class with name " << $$->name << " and parent " << $$->parent << std::endl;
     }
 ;
 
+// class_body:
+//     "{" class_content "}" { }
+//   | "{" "}" { }
+// ;
 class_body:
-    "{" class_content "}" { }
-  | "{" "}" { }
+    "{" class_content "}" {
+        std::cerr << "DEBUG: Finished parsing class body" << std::endl;
+    }
+  | "{" "}" {
+        std::cerr << "DEBUG: Finished parsing empty class body" << std::endl;
+    }
 ;
 
 class_content:
@@ -171,12 +223,32 @@ class_content:
   | class_content field_or_method
 ;
 
+// field_or_method:
+//     field {
+//         driver.current_class->fields.push_back($1);
+//     }
+//   | method {
+//         driver.current_class->methods.push_back($1);
+//     }
+// ;
 field_or_method:
     field {
-        driver.current_class->fields.push_back($1);
+        std::cerr << "DEBUG: Adding field to current class" << std::endl;
+        if (!driver.current_class) {
+            std::cerr << "ERROR: current_class is null when adding field!" << std::endl;
+        } else {
+            driver.current_class->fields.push_back($1);
+            std::cerr << "DEBUG: Field added successfully" << std::endl;
+        }
     }
   | method {
-        driver.current_class->methods.push_back($1);
+        std::cerr << "DEBUG: Adding method to current class" << std::endl;
+        if (!driver.current_class) {
+            std::cerr << "ERROR: current_class is null when adding method!" << std::endl;
+        } else {
+            driver.current_class->methods.push_back($1);
+            std::cerr << "DEBUG: Method added successfully, class now has " << driver.current_class->methods.size() << " methods" << std::endl;
+        }
     }
 ;
 
@@ -189,9 +261,18 @@ field:
     }
 ;
 
+// method:
+//     OBJECT_IDENTIFIER "(" formals ")" ":" type block {
+//         $$ = std::make_shared<Method>($1, $3, $6, $7);
+//     }
+// ;
 method:
     OBJECT_IDENTIFIER "(" formals ")" ":" type block {
+        std::cerr << "DEBUG: Creating method " << $1 << std::endl;
         $$ = std::make_shared<Method>($1, $3, $6, $7);
+        if (!$$) std::cerr << "WARNING: Method creation failed" << std::endl;
+        if (!$7) std::cerr << "WARNING: Method body (block) is null" << std::endl;
+        std::cerr << "DEBUG: Method created successfully" << std::endl;
     }
 ;
 
@@ -239,9 +320,17 @@ type:
     }
 ;
 
+// block:
+//     "{" expr_list "}" {
+//         $$ = std::make_shared<Block>($2);
+//     }
+// ;
 block:
     "{" expr_list "}" {
+        std::cerr << "DEBUG: Creating block with " << $2.size() << " expressions" << std::endl;
         $$ = std::make_shared<Block>($2);
+        if (!$$) std::cerr << "WARNING: Block creation failed" << std::endl;
+        std::cerr << "DEBUG: Block created successfully" << std::endl;
     }
 ;
 
@@ -275,13 +364,14 @@ expr:
   | OBJECT_IDENTIFIER "<-" expr {
         $$ = std::make_shared<Assign>($1, $3);
     }
-  | "not" expr %prec UNARY {
+  | "not" expr %prec "not" {
         $$ = std::make_shared<UnaryOp>("not", $2);
+        if (!$$) std::cerr << "WARNING: Failed to create UnaryOp node" << std::endl;
     }
-  | "-" expr %prec UNARY {
+  | "-" expr %prec UMINUS {
         $$ = std::make_shared<UnaryOp>("-", $2);
     }
-  | "isnull" expr %prec UNARY {
+  | "isnull" expr %prec "isnull" {
         $$ = std::make_shared<UnaryOp>("isnull", $2);
     }
   | expr "=" expr {
