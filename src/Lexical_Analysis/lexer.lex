@@ -81,7 +81,7 @@ whitespace					{blankspace}+
 
 lowercase_letter    [a-z]
 uppercase_letter    [A-Z]
-letter      {lowercase_letter}|{uppercase_letter}
+letter              {lowercase_letter}|{uppercase_letter}
 base_identifier		{letter}|{digit}|_
 type_identifier	    {uppercase_letter}{base_identifier}*
 object_identifier	{lowercase_letter}{base_identifier}*
