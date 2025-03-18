@@ -422,8 +422,6 @@ std::string PrettyPrinter::format_string_literal(const std::string& str) {
         } else if (c == '\b') {
             result << "\\x08";
         } else if (c == '\\') {
-            // When we encounter a backslash, just output a single backslash
-            // This fixes the double escaping issue
             result << "\\";
         } else if (c == '\"') {
             result << "\\\"";
