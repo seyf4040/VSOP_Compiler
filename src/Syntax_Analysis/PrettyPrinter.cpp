@@ -419,7 +419,7 @@ std::string PrettyPrinter::format_string_literal(const std::string& str) {
         } else if (c == '\b') {
             result << "\\x08";
         } else if (c == '\\') {
-            result << "\\\\";
+            result << "\\";
         } else if (c == '\"') {
             result << "\\\"";
         } else if (c < 32 || c > 126) {
