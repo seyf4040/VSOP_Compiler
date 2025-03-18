@@ -12,11 +12,9 @@
 
 // Force the token kind enum (used by the lexer) and the symbol kind enum
 // (used by the parser) to use the same value for the tokens.
-// (e.g. '+' will be represented by the same integer value in both enums.)
 %define api.token.raw
 
 // Tokens contain their type, value and location
-// Also allow to use the make_TOKEN functions
 %define api.token.constructor
 
 // Allow to use C++ objects as semantic values
@@ -114,7 +112,7 @@
 %type <std::shared_ptr<Method>> method
 %type <std::shared_ptr<Formal>> formal
 %type <std::vector<std::shared_ptr<Formal>>> formal_list formals
-%type <std::shared_ptr<Expression>> expr
+%type <std::shared_ptr<Expression>> expr primary_expr unary_expr method_call literal
 %type <std::vector<std::shared_ptr<Expression>>> expr_list args
 %type <std::shared_ptr<Block>> block
 %type <std::string> type
@@ -131,6 +129,10 @@
 %right "isnull"      // Precedence 3, right-associative
 %right "^"           // Precedence 2, right-associative
 %left "."            // Precedence 1, left-associative (highest)
+
+// Fix for dangling else
+%nonassoc THEN
+%nonassoc "else"
 
 %%
 // Grammar rules
@@ -285,11 +287,12 @@ expr_list:
 ;
 
 expr:
-    "if" expr "then" expr "else" expr {
-        $$ = std::make_shared<If>($2, $4, $6);
-    }
-  | "if" expr "then" expr {
+    // Control flow expressions
+    "if" expr "then" expr %prec THEN {
         $$ = std::make_shared<If>($2, $4);
+    }
+  | "if" expr "then" expr "else" expr {
+        $$ = std::make_shared<If>($2, $4, $6);
     }
   | "while" expr "do" expr {
         $$ = std::make_shared<While>($2, $4);
@@ -303,15 +306,22 @@ expr:
   | OBJECT_IDENTIFIER "<-" expr {
         $$ = std::make_shared<Assign>($1, $3);
     }
-  | "not" expr %prec "not" {
+
+  // Unary operations
+  | "not" expr {
         $$ = std::make_shared<UnaryOp>("not", $2);
         if (!$$) std::cerr << "WARNING: Failed to create UnaryOp node" << std::endl;
     }
   | "-" expr %prec UMINUS {
         $$ = std::make_shared<UnaryOp>("-", $2);
     }
-  | "isnull" expr %prec "isnull" {
+  | "isnull" expr {
         $$ = std::make_shared<UnaryOp>("isnull", $2);
+    }
+
+  // Binary operations with correct precedence
+  | expr "and" expr {
+        $$ = std::make_shared<BinaryOp>("and", $1, $3);
     }
   | expr "=" expr {
         $$ = std::make_shared<BinaryOp>("=", $1, $3);
@@ -337,21 +347,30 @@ expr:
   | expr "^" expr {
         $$ = std::make_shared<BinaryOp>("^", $1, $3);
     }
-  | expr "and" expr {
-        $$ = std::make_shared<BinaryOp>("and", $1, $3);
+
+  // Method calls
+  | method_call {
+        $$ = $1;
     }
-  | OBJECT_IDENTIFIER "(" args ")" {
+
+  // Primary expressions
+  | primary_expr {
+        $$ = $1;
+    }
+;
+
+method_call:
+    OBJECT_IDENTIFIER "(" args ")" {
         auto self = std::make_shared<Self>();
         $$ = std::make_shared<Call>(self, $1, $3);
     }
   | expr "." OBJECT_IDENTIFIER "(" args ")" {
         $$ = std::make_shared<Call>($1, $3, $5);
     }
-  | "(" expr "." OBJECT_IDENTIFIER "(" args ")" ")" {
-        // Handle expressions like (new Cons).init(...)
-        $$ = std::make_shared<Call>($2, $4, $6);
-    }
-  | "new" TYPE_IDENTIFIER {
+;
+
+primary_expr:
+    "new" TYPE_IDENTIFIER {
         $$ = std::make_shared<New>($2);
     }
   | OBJECT_IDENTIFIER {
@@ -360,7 +379,22 @@ expr:
   | "self" {
         $$ = std::make_shared<Self>();
     }
-  | INTEGER_LITERAL {
+  | literal {
+        $$ = $1;
+    }
+  | "(" ")" {
+        $$ = std::make_shared<UnitLiteral>();
+    }
+  | "(" expr ")" {
+        $$ = $2;
+    }
+  | block {
+        $$ = $1;
+    }
+;
+
+literal:
+    INTEGER_LITERAL {
         $$ = std::make_shared<IntegerLiteral>($1);
     }
   | STRING_LITERAL {
@@ -371,15 +405,6 @@ expr:
     }
   | "false" {
         $$ = std::make_shared<BooleanLiteral>(false);
-    }
-  | "(" ")" {
-        $$ = std::make_shared<UnitLiteral>();
-    }
-  | "(" expr ")" {
-        $$ = $2;
-    }
-  | block {
-        $$ = $1;
     }
 ;
 

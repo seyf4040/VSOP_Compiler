@@ -24,7 +24,7 @@ void PrettyPrinter::print(const Program* program) {
         }
         
         if (!first) {
-            os << ",\n ";
+            os << ",\n";
         }
         first = false;
         
@@ -39,30 +39,31 @@ void PrettyPrinter::visit(const Class* node) {
         return;
     }
     
-    os << "Class(" << node->name << ", " << node->parent << ",\n   [";
+    os << "Class(" << node->name << ", " << node->parent << ", ";
+    
+    if (node->fields.empty()) {
+        os << "[]";
+    } else {
+        os << "[\n   ";
+        bool first = true;
+        for (const auto& field : node->fields) {
+            if (!field) {
+                std::cerr << "ERROR: Field is null in Class!" << std::endl;
+                continue;
+            }
+            
+            if (!first) {
+                os << ",\n   ";
+            }
+            first = false;
+            field->accept(this);
+        }
+        os << "]";
+    }
+    
+    os << ",\n   [";
     
     bool first = true;
-    for (const auto& field : node->fields) {
-        if (!field) {
-            std::cerr << "ERROR: Field is null in Class!" << std::endl;
-            continue;
-        }
-        
-        if (!first) {
-            os << ",\n    ";
-        } else {
-            os << "\n    ";
-        }
-        first = false;
-        field->accept(this);
-    }
-    
-    if (!first) {
-        os << "\n   ";
-    }
-    os << "],\n   [";
-    
-    first = true;
     for (const auto& method : node->methods) {
         if (!method) {
             std::cerr << "ERROR: Method is null in Class!" << std::endl;
@@ -70,18 +71,20 @@ void PrettyPrinter::visit(const Class* node) {
         }
         
         if (!first) {
-            os << ",\n    ";
+            os << ",\n   ";
         } else {
-            os << "\n    ";
+            os << "\n   ";
         }
         first = false;
         method->accept(this);
     }
     
     if (!first) {
-        os << "\n   ";
+        os << "]";
+    } else {
+        os << "]";
     }
-    os << "])";
+    os << ")";
 }
 
 void PrettyPrinter::visit(const Field* node) {
@@ -281,7 +284,7 @@ void PrettyPrinter::visit(const If* node) {
     }
     
     if (node->else_expr) {
-        os << ", ";
+        os << ",\n         ";
         node->else_expr->accept(this);
     }
     
@@ -406,7 +409,7 @@ void PrettyPrinter::visit(const Block* node) {
 }
 
 // Format the string literal for printing in the AST
-// This is directly using escaped sequences in the format the reference compiler expects
+// Fix: Handle escape sequences correctly
 std::string PrettyPrinter::format_string_literal(const std::string& str) {
     std::ostringstream result;
     for (char c : str) {
@@ -419,7 +422,9 @@ std::string PrettyPrinter::format_string_literal(const std::string& str) {
         } else if (c == '\b') {
             result << "\\x08";
         } else if (c == '\\') {
-            result << "\\\\";
+            // When we encounter a backslash, just output a single backslash
+            // This fixes the double escaping issue
+            result << "\\";
         } else if (c == '\"') {
             result << "\\\"";
         } else if (c < 32 || c > 126) {
