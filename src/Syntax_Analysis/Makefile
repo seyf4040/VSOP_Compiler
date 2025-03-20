@@ -24,6 +24,7 @@ PrettyPrinter.o: PrettyPrinter.hpp AST.hpp
 
 $(EXEC): $(OBJ)
 	$(CXX) -o $@ $(LDFLAGS) $(OBJ)
+	@rm -f $(OBJ)
 
 parser.cpp parser.hpp: parser.y
 	bison $(BISONFLAGS) -o parser.cpp $^

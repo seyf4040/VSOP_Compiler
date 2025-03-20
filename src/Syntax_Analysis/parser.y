@@ -119,6 +119,9 @@
 %type <std::shared_ptr<Block>> block
 %type <std::string> type
 
+%nonassoc LOWER_THAN_ELSE
+%nonassoc "else"
+
 // Precedence and associativity according to VSOP language spec
 // From lowest to highest precedence
 %right "<-"          // Precedence 9, right-associative
@@ -288,7 +291,7 @@ expr:
     "if" expr "then" expr "else" expr {
         $$ = std::make_shared<If>($2, $4, $6);
     }
-  | "if" expr "then" expr {
+  | "if" expr "then" expr %prec LOWER_THAN_ELSE {
         $$ = std::make_shared<If>($2, $4);
     }
   | "while" expr "do" expr {
