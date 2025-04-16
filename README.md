@@ -31,10 +31,14 @@ VSOP_COMPILER
 
 ## Running 
 Navigate to the part you need to run 
-- Lexical analysis 
+- Lexical analysis
 ```
 ./vsopc input.vsop
 ```
+There are three modes:
+-l for the lexical analysis,
+-p for the syntax analysis,
+-c for the semantic analysis
 
 ## Contributors 
 - Mparirwa Julien
