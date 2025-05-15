@@ -347,9 +347,9 @@ expr:
   | expr "." OBJECT_IDENTIFIER "(" args ")" {
         $$ = std::make_shared<Call>($1, $3, $5);
     }
-  | "(" expr "." OBJECT_IDENTIFIER "(" args ")" ")" {
+  | "(" expr ")" "." OBJECT_IDENTIFIER "(" args ")" {
         // Handle expressions like (new Cons).init(...)
-        $$ = std::make_shared<Call>($2, $4, $6);
+        $$ = std::make_shared<Call>($2, $5, $7);
     }
   | "new" TYPE_IDENTIFIER {
         $$ = std::make_shared<New>($2);

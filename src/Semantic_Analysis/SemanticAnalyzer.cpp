@@ -14,7 +14,10 @@ Type::Type(const std::string& name, Kind kind)
 bool Type::conformsTo(const Type& other, const std::unordered_map<std::string, ClassDef>& class_defs) const {
     if (name == other.name) return true;
     if (isError() || other.isError()) return true;
-    if (kind == Kind::PRIMITIVE || other.kind == Kind::PRIMITIVE) return false; // Primitives only conform to self
+    if (kind == Kind::PRIMITIVE || other.kind == Kind::PRIMITIVE) {
+        if (other.name == "Object") return true; // Primitives conform to Object
+        return false; // Otherwise, primitives only conform to themselves
+    }
     if (other.name == "Object") return true; // All classes conform to Object
 
     std::string current = name;
@@ -34,8 +37,7 @@ const std::unordered_map<std::string, ClassDef>& SemanticAnalyzer::getClassDefin
 // MethodSignature implementation
 bool MethodSignature::isCompatible(const MethodSignature& other) const {
     // Check return type and parameter count
-    // Use conformsTo for return type covariance (if language supports it, VSOP doesn't explicitly)
-    // For VSOP, require exact match for return type.
+    // For VSOP, require exact match for return type
     if (returnType.toString() != other.returnType.toString() ||
         parameters.size() != other.parameters.size()) {
         return false;
@@ -74,7 +76,6 @@ bool ClassDef::hasCyclicInheritance(const std::unordered_map<std::string, ClassD
     return false; // Reached Object or end without cycle
 }
 
-
 // Scope implementation remains the same
 std::pair<bool, Type> Scope::lookupVariable(const std::string& name) const {
     auto it = variables.find(name);
@@ -107,6 +108,15 @@ void SemanticAnalyzer::initObjectMethods() {
     object_def.methods["inputInt32"] = MethodSignature("inputInt32", input_int_params, Type::Int32());
     std::vector<FormalParam> input_string_params;
     object_def.methods["inputString"] = MethodSignature("inputString", input_string_params, Type::String());
+    
+    // Add additional built-in methods for I/O operations
+    std::vector<FormalParam> printBool_params = {FormalParam("b", Type::Boolean())};
+    object_def.methods["printBool"] = MethodSignature("printBool", printBool_params, Type::Object());
+    std::vector<FormalParam> inputBool_params;
+    object_def.methods["inputBool"] = MethodSignature("inputBool", inputBool_params, Type::Boolean());
+    std::vector<FormalParam> inputLine_params;
+    object_def.methods["inputLine"] = MethodSignature("inputLine", inputLine_params, Type::String());
+    
     class_definitions["Object"] = object_def;
 }
 
@@ -134,10 +144,7 @@ bool SemanticAnalyzer::analyze(std::shared_ptr<Program> prog) {
     collectMethodsAndFields();
     if (!errors.empty()) return false; // Stop if members have issues
 
-    // Type checking is now primarily done by TypeChecker visitor
-    // typeCheckProgram(); // Removed - TypeChecker handles this pass
-
-    // Check for Main class and main method (still responsibility of analyzer?)
+    // Check for Main class and main method
     auto main_class_it = class_definitions.find("Main");
     if (main_class_it == class_definitions.end()) {
         reportError("Program must have a Main class");
@@ -155,7 +162,6 @@ bool SemanticAnalyzer::analyze(std::shared_ptr<Program> prog) {
             }
         }
     }
-
 
     return errors.empty();
 }
@@ -219,8 +225,7 @@ void SemanticAnalyzer::collectMethodsAndFields() {
     std::unordered_map<std::string, std::unordered_set<std::string>> class_fields;
     std::unordered_map<std::string, std::unordered_map<std::string, MethodSignature>> class_methods;
 
-    // Need to process classes respecting inheritance order, or iterate multiple times?
-    // Let's iterate through the AST classes directly first.
+    // Iterate through the AST classes
     for (const auto& [name, cls_node] : class_table) {
         if (!cls_node) continue;
         auto& class_def = class_definitions[name]; // Get the definition being built
@@ -237,24 +242,18 @@ void SemanticAnalyzer::collectMethodsAndFields() {
             }
              local_field_names.insert(field_node->name);
 
-            // Check if field shadows parent field (disallowed in VSOP?)
-             // Requires looking up parent hierarchy. Let's use findFieldType helper.
+            // Check if field shadows parent field
              if (findFieldType(class_def.parent, field_node->name).has_value()) {
                   reportError("Field " + field_node->name + " in class " + name +
                               " cannot shadow a field from an ancestor class.");
                  continue;
              }
 
-
             // Check field type is valid
             Type field_type = resolveType(field_node->type);
             if (field_type.isError()) {
                 reportError("Unknown type " + field_node->type + " for field " + field_node->name + " in class " + name);
                 continue;
-            }
-            if (field_type.toString() == "unit") {
-                 reportError("Field " + field_node->name + " in class " + name + " cannot have type unit");
-                 continue;
             }
 
             // Add field to class definition
@@ -296,10 +295,13 @@ void SemanticAnalyzer::collectMethodsAndFields() {
                      reportError("Unknown type " + formal_node->type + " for parameter " + formal_node->name + " in method " + method_node->name);
                      param_type_error = true;
                  }
-                 if (param_type.toString() == "unit") {
-                     reportError("Parameter " + formal_node->name + " in method " + method_node->name + " cannot have type unit");
-                     param_type_error = true;
-                 }
+                 
+                 // Remove restriction on unit parameters - VSOP allows unit parameters
+                 // if (param_type.toString() == "unit") {
+                 //     reportError("Parameter " + formal_node->name + " in method " + method_node->name + " cannot have type unit");
+                 //     param_type_error = true;
+                 // }
+                 
                  formal_params.push_back(FormalParam(formal_node->name, param_type));
              }
 
