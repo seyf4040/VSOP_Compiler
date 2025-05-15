@@ -28,8 +28,10 @@ private:
     std::shared_ptr<Program> program;
     std::vector<std::string> errors;
     
-    // Annotate the AST with type information
-    void annotateAST();
+    // Type context building
+    void buildTypeContext();
+    void annotateMethodBody(const Expression* expr, const std::string& return_type);
+    void annotateExpressionType(const Expression* expr, const std::string& expected_type = "");
     
     // Helper to print a node and its children
     void printNode(std::ostream& os, const ASTNode* node, int indent = 0) const;
@@ -42,6 +44,10 @@ private:
     
     // Get the type annotation for an expression
     std::string getTypeAnnotation(const Expression* expr) const;
+    
+    // Helper methods for type annotation
+    const Field* findFieldWithName(const std::string& name) const;
+    const Method* findMethodWithName(const std::string& name, const std::string& class_name = "") const;
 };
 
 } // namespace VSOP

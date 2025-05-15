@@ -15,7 +15,6 @@ using namespace VSOP;
 // External variable from lexer.lex
 extern location loc;
  
-// Constructor implementation (moved from header)
 Driver::Driver(const std::string &_source_file) 
     : program(nullptr), current_class(nullptr), source_file(_source_file) {}
  
@@ -168,7 +167,6 @@ int Driver::lex()
 int Driver::parse()
 {
     try {
-        // Initialize the program
         program = std::make_shared<Program>();
         
         scan_begin();
@@ -193,16 +191,14 @@ int Driver::parse()
 int Driver::check()
 {
     try {
-        // First, parse the program
         int parse_result = parse();
         if (parse_result != 0) {
             return parse_result;  // Parsing failed
         }
         
-        // Then run semantic analysis
         SemanticChecker checker(source_file);
         if (!checker.check(program)) {
-            // Print semantic errors
+            // Prints semantic errors
             const auto& errors = checker.getErrors();
             for (const auto& error : errors) {
                 cerr << error << endl;

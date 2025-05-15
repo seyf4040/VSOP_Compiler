@@ -35,7 +35,6 @@ static const map<string, Mode> flag_to_mode = {
 void segfault_handler(int sig) {
     std::cerr << "SEGMENTATION FAULT DETECTED! " << "Index: " << sig << std::endl;
     
-    // Get backtrace (limited functionality, but better than nothing)
     void* array[20];
     size_t size = backtrace(array, 20);
     std::cerr << "Backtrace:" << std::endl;

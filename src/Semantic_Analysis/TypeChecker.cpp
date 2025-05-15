@@ -97,9 +97,6 @@ bool TypeChecker::isSubtypeOf(const std::string& subtype_name, const std::string
     if (subtype.isError() || supertype.isError()) return false; // Invalid types involved
 
     // Use the Type::conformsTo method, passing the analyzer's class_definitions
-    // Need a way to access class_definitions. Let's modify Type::conformsTo
-    // or add a helper in Analyzer. Modifying Type::conformsTo is simpler for now.
-    // (Modification done in SemanticAnalyzer.cpp/hpp above)
     return subtype.conformsTo(supertype, analyzer.getClassDefinitions());
 }
 
