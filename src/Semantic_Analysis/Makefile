@@ -1,6 +1,7 @@
 CXX             = clang++
-CXXFLAGS        = -Wall -Wextra -std=c++11 `llvm-config --cxxflags` -fexceptions
-LDFLAGS         = `llvm-config --ldflags --system-libs --libs core support irreader bitwriter linker all` -fexceptions
+LLVM_CONFIG      = llvm-config
+CXXFLAGS        = -Wall -Wextra -std=c++11 $(shell ${LLVM_CONFIG} --cxxflags) -fexceptions
+LDFLAGS         = $(shell ${LLVM_CONFIG} --ldflags --system-libs --libs core support irreader bitwriter linker all) -fexceptions
 BISONFLAGS      = -d
 EXEC            = vsopc
 SRC             = main.cpp \
