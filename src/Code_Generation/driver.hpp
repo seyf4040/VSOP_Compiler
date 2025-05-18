@@ -88,22 +88,6 @@ namespace VSOP
         int check();
         
         /**
-         * @brief Generate LLVM IR code for the program.
-         * 
-         * @param output The stream to output the LLVM IR code.
-         * @return int 0 if no errors.
-         */
-        int generate_ir(std::ostream& output);
-        
-        /**
-         * @brief Generate a native executable for the program.
-         * 
-         * @param output_file The path to the output executable file.
-         * @return int 0 if no errors.
-         */
-        int generate_executable(const std::string& output_file);
-        
-        /**
          * @brief Print all the tokens.
          */
         void print_tokens();

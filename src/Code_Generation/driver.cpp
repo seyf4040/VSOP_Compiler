@@ -8,7 +8,6 @@
 #include "utils.hpp"
 #include "PrettyPrinter.hpp"
 #include "SemanticChecker.hpp"
-#include "CodeGenerator.hpp"
  
 using namespace std;
 using namespace VSOP;
@@ -218,77 +217,6 @@ int Driver::check()
         return 1;
     } catch (...) {
         cerr << "Unknown exception during semantic checking" << endl;
-        return 1;
-    }
-}
-
-int Driver::generate_ir(std::ostream& output)
-{
-    try {
-        // First check the program
-        int check_result = check();
-        if (check_result != 0) {
-            return check_result;  // Semantic errors detected
-        }
-        
-        // Generate LLVM IR
-        CodeGenerator generator(source_file);
-        if (!generator.generate(program, true)) {
-            // Print code generation errors
-            const auto& errors = generator.getErrors();
-            for (const auto& error : errors) {
-                cerr << error << endl;
-            }
-            return 1;  // Code generation errors detected
-        }
-        
-        // Output the IR
-        generator.dumpIR(output);
-        
-        return 0;  // Success
-        
-    } catch (const std::exception& e) {
-        cerr << "Exception during code generation: " << e.what() << endl;
-        return 1;
-    } catch (...) {
-        cerr << "Unknown exception during code generation" << endl;
-        return 1;
-    }
-}
-
-int Driver::generate_executable(const std::string& output_file)
-{
-    try {
-        // First check the program
-        int check_result = check();
-        if (check_result != 0) {
-            return check_result;  // Semantic errors detected
-        }
-        
-        // Generate native executable
-        CodeGenerator generator(source_file);
-        if (!generator.generate(program, true)) {
-            // Print code generation errors
-            const auto& errors = generator.getErrors();
-            for (const auto& error : errors) {
-                cerr << error << endl;
-            }
-            return 1;  // Code generation errors detected
-        }
-        
-        // Write executable
-        if (!generator.writeNativeExecutable(output_file)) {
-            cerr << "Failed to write executable: " << output_file << endl;
-            return 1;
-        }
-        
-        return 0;  // Success
-        
-    } catch (const std::exception& e) {
-        cerr << "Exception during executable generation: " << e.what() << endl;
-        return 1;
-    } catch (...) {
-        cerr << "Unknown exception during executable generation" << endl;
         return 1;
     }
 }
