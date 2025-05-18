@@ -198,7 +198,9 @@ void SemanticAnalyzer::buildClassDefinitions() {
 }
 
 void SemanticAnalyzer::validateInheritanceHierarchy() {
-    for (const auto& [name, class_def] : class_definitions) {
+    for (const auto& class_def_pair : class_definitions) {
+        const std::string& name = class_def_pair.first;
+        const ClassDef& class_def = class_def_pair.second;
         if (name == "Object") continue;
 
         const std::string& parent_name = class_def.parent;
@@ -226,7 +228,9 @@ void SemanticAnalyzer::collectMethodsAndFields() {
     std::unordered_map<std::string, std::unordered_map<std::string, MethodSignature>> class_methods;
 
     // Iterate through the AST classes
-    for (const auto& [name, cls_node] : class_table) {
+    for (const auto& cls_table_pair : class_table) {
+        const std::string& name = cls_table_pair.first;
+        const std::shared_ptr<Class>& cls_node = cls_table_pair.second;
         if (!cls_node) continue;
         auto& class_def = class_definitions[name]; // Get the definition being built
 
@@ -243,7 +247,8 @@ void SemanticAnalyzer::collectMethodsAndFields() {
              local_field_names.insert(field_node->name);
 
             // Check if field shadows parent field
-             if (findFieldType(class_def.parent, field_node->name).has_value()) {
+            auto field_result = findFieldType(class_def.parent, field_node->name);
+            if (field_result.first) {
                   reportError("Field " + field_node->name + " in class " + name +
                               " cannot shadow a field from an ancestor class.");
                  continue;
@@ -318,11 +323,10 @@ void SemanticAnalyzer::collectMethodsAndFields() {
              MethodSignature current_sig(method_node->name, formal_params, return_type);
 
              // Check method overriding: find method in parent hierarchy
-             std::optional<MethodSignature> parent_sig_opt = findMethodSignature(class_def.parent, method_node->name);
-
-             if (parent_sig_opt.has_value()) {
-                 // Method overrides parent method. Check signature compatibility.
-                 if (!current_sig.isCompatible(parent_sig_opt.value())) {
+             auto parent_sig_result = findMethodSignature(class_def.parent, method_node->name);
+            if (parent_sig_result.first) {
+                // Method overrides parent method. Check signature compatibility.
+                if (!current_sig.isCompatible(parent_sig_result.second)) {
                      reportError("Method " + method_node->name + " in class " + name +
                                  " overrides parent method with incompatible signature.");
                      continue; // Don't add incompatible override
@@ -357,50 +361,48 @@ Type SemanticAnalyzer::resolveType(const std::string& typeName) {
     return Type::Error(); // Unknown type
 }
 
-std::optional<std::string> SemanticAnalyzer::getParentClassName(const std::string& className) {
-    if (className == "Object") return std::nullopt; // Object has no parent
+std::pair<bool, std::string> SemanticAnalyzer::getParentClassName(const std::string& className) {
+    if (className == "Object") return {false, ""}; // Object has no parent
     auto it = class_definitions.find(className);
     if (it != class_definitions.end()) {
-        // Return parent, which could be empty string if it should be Object but wasn't set?
-        // Assume parent is correctly set during buildClassDefinitions.
-        if (it->second.parent.empty()) return std::nullopt; // Should only happen for Object
-        return it->second.parent;
+        if (it->second.parent.empty()) return {false, ""}; // Should only happen for Object
+        return {true, it->second.parent};
     }
-    return std::nullopt; // Class not found
+    return {false, ""}; // Class not found
 }
 
-std::optional<Type> SemanticAnalyzer::findFieldType(const std::string& className, const std::string& fieldName) {
+std::pair<bool, Type> SemanticAnalyzer::findFieldType(const std::string& className, const std::string& fieldName) {
     std::string current_class = className;
     while (!current_class.empty()) {
         auto class_it = class_definitions.find(current_class);
         if (class_it == class_definitions.end()) {
-            return std::nullopt; // Class not found in hierarchy
+            return {false, Type::Error()}; // Class not found in hierarchy
         }
         auto field_it = class_it->second.fields.find(fieldName);
         if (field_it != class_it->second.fields.end()) {
-            return field_it->second; // Found field
+            return {true, field_it->second}; // Found field
         }
         if (current_class == "Object") break; // Stop at Object
         current_class = class_it->second.parent;
     }
-    return std::nullopt; // Field not found in hierarchy
+    return {false, Type::Error()}; // Field not found in hierarchy
 }
 
-std::optional<MethodSignature> SemanticAnalyzer::findMethodSignature(const std::string& className, const std::string& methodName) {
+std::pair<bool, MethodSignature> SemanticAnalyzer::findMethodSignature(const std::string& className, const std::string& methodName) {
     std::string current_class = className;
     while (!current_class.empty()) {
         auto class_it = class_definitions.find(current_class);
         if (class_it == class_definitions.end()) {
-            return std::nullopt; // Class not found in hierarchy
+            return {false, MethodSignature()}; // Class not found in hierarchy
         }
         auto method_it = class_it->second.methods.find(methodName);
         if (method_it != class_it->second.methods.end()) {
-            return method_it->second; // Found method
+            return {true, method_it->second}; // Found method
         }
-         if (current_class == "Object") break; // Stop at Object
+        if (current_class == "Object") break; // Stop at Object
         current_class = class_it->second.parent;
     }
-    return std::nullopt; // Method not found in hierarchy
+    return {false, MethodSignature()}; // Method not found in hierarchy
 }
 
 

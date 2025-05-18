@@ -4,7 +4,6 @@
 #include <list>
 #include <stack>
 #include <sstream>
-#include <optional> // Include optional
 
 namespace VSOP {
 
@@ -63,9 +62,9 @@ std::string TypeChecker::lookupSymbol(const std::string& name) {
 
     // If not in lexical scopes, check if it's a field of the current class or ancestors
     if (!current_class.empty()) {
-        std::optional<Type> field_type_opt = analyzer.findFieldType(current_class, name);
-        if (field_type_opt.has_value()) {
-            return field_type_opt.value().toString();
+        auto field_result = analyzer.findFieldType(current_class, name);
+        if (field_result.first) {
+            return field_result.second.toString();
         }
     }
 
@@ -453,9 +452,8 @@ std::string TypeChecker::getMethodReturnType(const std::string& className,
                                           const std::string& methodName,
                                           const std::vector<std::string>& argTypes) {
 
-    std::optional<MethodSignature> sig_opt = analyzer.findMethodSignature(className, methodName);
-
-    if (!sig_opt.has_value()) {
+    auto sig_result = analyzer.findMethodSignature(className, methodName);
+    if (!sig_result.first) {
         // Check built-ins if class is Object (findMethodSignature should handle hierarchy already)
         if (className == "Object") {
              if (methodName == "print") { if (argTypes.size() == 1 && isSubtypeOf(argTypes[0], "string")) return "Object"; }
@@ -470,7 +468,7 @@ std::string TypeChecker::getMethodReturnType(const std::string& className,
     }
 
     // Method found, check arguments
-    const MethodSignature& signature = sig_opt.value();
+    const MethodSignature& signature = sig_result.second;
     if (signature.parameters.size() != argTypes.size()) {
          std::stringstream ss_args; for(size_t i=0; i<argTypes.size(); ++i) ss_args << (i > 0 ? ", " : "") << argTypes[i];
          reportError("Method '" + methodName + "' called with wrong number of arguments. Expected " +

@@ -128,9 +128,9 @@ public:
     // --- Public methods for TypeChecker ---
     bool isTypeValid(const std::string& typeName); // Made public
     Type resolveType(const std::string& typeName);  // Made public
-    std::optional<std::string> getParentClassName(const std::string& className);
-    std::optional<Type> findFieldType(const std::string& className, const std::string& fieldName); // Checks hierarchy
-    std::optional<MethodSignature> findMethodSignature(const std::string& className, const std::string& methodName); // Checks hierarchy
+    std::pair<bool, std::string> getParentClassName(const std::string& className);
+    std::pair<bool, Type> findFieldType(const std::string& className, const std::string& fieldName);
+    std::pair<bool, MethodSignature> findMethodSignature(const std::string& className, const std::string& methodName);
     Type findCommonAncestor(const Type& type1, const Type& type2); // Made public
 
 
