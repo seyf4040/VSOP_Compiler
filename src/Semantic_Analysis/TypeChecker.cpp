@@ -54,13 +54,13 @@ void TypeChecker::addSymbol(const std::string& name, const std::string& type) {
 }
 
 std::string TypeChecker::lookupSymbol(const std::string& name) {
-    // Look in lexical scopes first
+    // Looks in lexical scopes first (innermost to outermost)
     for (const auto& scope : scopes) {
         auto it = scope.find(name);
         if (it != scope.end()) return it->second;
     }
 
-    // If not in lexical scopes, check if it's a field of the current class or ancestors
+    // If not in lexical scopes, checks if it's a field of the current class or ancestors
     if (!current_class.empty()) {
         auto field_result = analyzer.findFieldType(current_class, name);
         if (field_result.first) {
@@ -68,7 +68,7 @@ std::string TypeChecker::lookupSymbol(const std::string& name) {
         }
     }
 
-    return "__error__"; // Not found
+    return "__error__";
 }
 
 // Expression Type Management
@@ -334,7 +334,7 @@ void TypeChecker::visit(const Let* node) {
     }
 
     enterScope();
-    addSymbol(node->name, declared_type); // Add even if __error__ type
+    addSymbol(node->name, declared_type);
     if (node->scope_expr) node->scope_expr->accept(this);
     std::string scope_type = getExprType(node->scope_expr.get());
     exitScope();
@@ -368,7 +368,6 @@ void TypeChecker::visit(const If* node) {
         setExprType(node, getCommonAncestor(then_type, else_type));
     }
 }
-
 void TypeChecker::visit(const While* node) {
     node->condition->accept(this);
     std::string condition_type = getExprType(node->condition.get());

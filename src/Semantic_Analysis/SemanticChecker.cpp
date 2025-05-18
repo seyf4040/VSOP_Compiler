@@ -141,13 +141,13 @@ void SemanticChecker::annotateExpressionType(const Expression* expr, const std::
         expr_types[expr] = current_class_name;
     }
     else if (const Identifier* id = dynamic_cast<const Identifier*>(expr)) {
-        // Check parameters first
-        if (current_params.count(id->name)) {
-            expr_types[expr] = current_params[id->name];
-        } 
-        // Then local variables
-        else if (current_locals.count(id->name)) {
+        // Check local variables first (they shadow parameters and fields)
+        if (current_locals.count(id->name)) {
             expr_types[expr] = current_locals[id->name];
+        } 
+        // Then check parameters
+        else if (current_params.count(id->name)) {
+            expr_types[expr] = current_params[id->name];
         }
         // Then field in current class
         else {
